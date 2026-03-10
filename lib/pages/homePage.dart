@@ -1,238 +1,326 @@
 import 'package:flutter/material.dart';
+import '../models/dashboardModel.dart';
+import '../services/dashboardServices.dart';
 
-class PasswordField extends StatefulWidget {
-  final TextEditingController controller;
-  final VoidCallback onSubmit;
-
-  const PasswordField({
-    super.key,
-    required this.controller,
-    required this.onSubmit,
-  });
+class DashboardPage extends StatefulWidget {
+  const DashboardPage({super.key});
 
   @override
-  State<PasswordField> createState() => _PasswordFieldState();
+  State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _PasswordFieldState extends State<PasswordField> {
-  bool _isObscured = true;
+class _DashboardPageState extends State<DashboardPage> {
+  final DashboardService _service = DashboardService();
+  DashboardData? _data;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await _service.fetchDashboard();
+    setState(() {
+      _data = data;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // show spinner while loading
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F0F0F),
+        body: Center(child: CircularProgressIndicator(color: Colors.green)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F0F),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // greeting
+              Row(
+                children: [
+                  Text(
+                    'Good morning ',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  ),
+                  Text('👋'),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _data!.shopName, // ← from model
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              _StatCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.currency_rupee,
+                          color: Colors.green,
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          "Today's Revenue",
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '₹${_data!.revenue.toStringAsFixed(0)}', // ← from model
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                color: Colors.purple[300],
+                                size: 16,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Customers Today',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${_data!.customersToday}', // ← from model
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                color: Colors.orange[300],
+                                size: 16,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Upcoming',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${_data!.upcomingCount}', // ← from model
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              _StatCard(
+                child: Row(
+                  children: [
+                    Icon(Icons.trending_up, color: Colors.green, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      '+${_data!.revenueChange}%', // ← from model
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'more revenue than last Saturday',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                'Upcoming Today',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ← renders appointments from model
+              ..._data!.appointments.map(
+                (a) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _AppointmentCard(
+                    name: a.name,
+                    service: a.service,
+                    barber: a.barber,
+                    time: a.time,
+                    duration: a.duration,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final Widget child;
+
+  const _StatCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 300,
-      height: 30,
-      child: TextField(
-        controller: widget.controller,
-        cursorColor: Colors.white,
-        cursorHeight: 15,
-        style: TextStyle(color: Colors.grey),
-        obscureText: _isObscured,
-        onSubmitted: (_) => widget.onSubmit(),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.black,
-          hintText: 'password',
-          contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _isObscured ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey,
-              size: 16,
-            ),
-            onPressed: () {
-              setState(() {
-                _isObscured = !_isObscured;
-              });
-            },
-          ),
-        ),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1C),
+        borderRadius: BorderRadius.circular(12),
       ),
+      child: child,
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class _AppointmentCard extends StatelessWidget {
+  final String name;
+  final String service;
+  final String barber;
+  final String time;
+  final String duration;
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
-  // ---- VALIDATION ----
-  bool _isValidEmail(String email) {
-    final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
-    return emailRegex.hasMatch(email.trim());
-  }
-
-  bool _isValidPassword(String password) {
-    return password.isNotEmpty;
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromARGB(255, 32, 32, 32),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: Colors.red, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: Colors.grey)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleSubmit() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    if (!_isValidEmail(email) && !_isValidPassword(password)) {
-      _showErrorDialog('Email or password is incorrect.');
-      return;
-    }
-
-    if (!_isValidEmail(email)) {
-      _showErrorDialog('Invalid email');
-      return;
-    }
-
-    if (!_isValidPassword(password)) {
-      _showErrorDialog('Password cannot be empty');
-      return;
-    }
-
-    // all good — log and proceed
-    print('Email: $email');
-    print('Password: $password');
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  const _AppointmentCard({
+    required this.name,
+    required this.service,
+    required this.barber,
+    required this.time,
+    required this.duration,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 32, 32, 32),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Welcome to Riyoshi',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              'Sign in to access the account area',
-              style: TextStyle(color: Colors.grey, fontSize: 15),
-            ),
-
-            const SizedBox(height: 24),
-
-            // email
-            Container(
-              width: 300,
-              height: 30,
-              child: TextField(
-                controller: _emailController,
-                cursorColor: Colors.white,
-                cursorHeight: 15,
-                style: TextStyle(color: Colors.grey),
-                keyboardType: TextInputType.emailAddress,
-                onSubmitted: (_) => _handleSubmit(),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.black,
-                  hintText: 'email',
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 5,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1C),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 6),
-
-            PasswordField(
-              controller: _passwordController,
-              onSubmit: _handleSubmit,
-            ),
-
-            const SizedBox(height: 16),
-
-            Container(
-              width: 300,
-              height: 30,
-              child: ElevatedButton(
-                onPressed: _handleSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 103, 105, 109),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 208, 208, 208),
-                  ),
+              SizedBox(height: 4),
+              Text(
+                '$service • $barber',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                time,
+                style: TextStyle(
+                  color: Colors.purple[300],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Forgot password? -',
-                  style: TextStyle(color: Colors.grey, fontSize: 15),
-                ),
-                SizedBox(width: 5),
-                Text(
-                  'Reset',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
-                ),
-              ],
-            ),
-          ],
-        ),
+              SizedBox(height: 4),
+              Text(
+                duration,
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
