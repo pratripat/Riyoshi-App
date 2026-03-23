@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import 'homePage.dart';
+import 'package:myapp/pages/homePage.dart';
 
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
@@ -58,18 +57,17 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // ---- VALIDATION ----
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
     return emailRegex.hasMatch(email.trim());
@@ -126,13 +124,9 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // all good — log and proceed
-    print('Email: $email');
-    print('Password: $password');
-
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => DashboardPage()),
+      MaterialPageRoute(builder: (context) => const HomePage()),
     );
   }
 
@@ -151,15 +145,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // logo
-            // Text(
-            //   'Welcome to',
-            //   style: TextStyle(
-            //     color: Colors.white,
-            //     fontSize: 20,
-            //     fontWeight: FontWeight.bold,
-            //   ),
-            // ),
             Image.asset('lib/images/logo.png', width: 300),
             Text(
               'Sign in to access the account area',
@@ -168,7 +153,6 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 24),
 
-            // email
             Container(
               width: 300,
               height: 30,
@@ -183,10 +167,7 @@ class _HomePageState extends State<HomePage> {
                   filled: true,
                   fillColor: Colors.black,
                   hintText: 'email',
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 5,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -217,9 +198,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: Text(
                   'Continue',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 208, 208, 208),
-                  ),
+                  style: TextStyle(color: const Color.fromARGB(255, 208, 208, 208)),
                 ),
               ),
             ),
@@ -229,15 +208,9 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Forgot password? -',
-                  style: TextStyle(color: Colors.grey, fontSize: 15),
-                ),
+                Text('Forgot password? -', style: TextStyle(color: Colors.grey, fontSize: 15)),
                 SizedBox(width: 5),
-                Text(
-                  'Reset',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
-                ),
+                Text('Reset', style: TextStyle(color: Colors.white, fontSize: 15)),
               ],
             ),
           ],
