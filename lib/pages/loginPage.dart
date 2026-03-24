@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/pages/homePage.dart';
 import 'package:myapp/services/authService.dart';
-
-import 'mainShell.dart';
 
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
@@ -70,7 +69,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // ---- VALIDATION ----
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
     return emailRegex.hasMatch(email.trim());
@@ -127,6 +125,10 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+    );
     bool _isLoading = false;
     setState(() => _isLoading = true);
 
@@ -137,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MainShell()),
+        MaterialPageRoute(builder: (context) => HomePage()),
       );
     } else {
       _showErrorDialog('Invalid email or password.');
@@ -159,15 +161,6 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // logo
-            // Text(
-            //   'Welcome to',
-            //   style: TextStyle(
-            //     color: Colors.white,
-            //     fontSize: 20,
-            //     fontWeight: FontWeight.bold,
-            //   ),
-            // ),
             Image.asset('lib/images/logo.png', width: 300),
             Text(
               'Sign in to access the account area',
@@ -176,7 +169,6 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 24),
 
-            // email
             Container(
               width: 300,
               height: 30,
