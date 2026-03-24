@@ -1,4 +1,6 @@
 import '../models/dashboardModel.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class DashboardService {
   Future<DashboardData> fetchDashboard() async {
@@ -12,6 +14,11 @@ class DashboardService {
     await Future.delayed(
       Duration(milliseconds: 500),
     ); // simulates network delay
+
+    // final response = await http.get(
+    //   Uri.parse('http://localhost:8000/dashboard'),
+    // );
+    // final json = jsonDecode(response.body);
 
     final hardcoded = {
       'shopName': 'Royal Cuts Salon',

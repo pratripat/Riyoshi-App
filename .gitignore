@@ -55,3 +55,23 @@ android/local.properties
 # Firebase (if you ever use it)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Flutter
+.dart_tool/
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Environment / secrets
+lib/config/constants.dart
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

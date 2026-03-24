@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/pages/homePage.dart';
+import 'package:myapp/services/authService.dart';
 
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
@@ -105,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -124,10 +125,21 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
-    );
+    bool _isLoading = false;
+    setState(() => _isLoading = true);
+
+    final success = await AuthService.login(email, password);
+
+    setState(() => _isLoading = false);
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } else {
+      _showErrorDialog('Invalid email or password.');
+    }
   }
 
   @override
@@ -167,7 +179,10 @@ class _LoginPageState extends State<LoginPage> {
                   filled: true,
                   fillColor: Colors.black,
                   hintText: 'email',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 5,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -198,7 +213,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: Text(
                   'Continue',
-                  style: TextStyle(color: const Color.fromARGB(255, 208, 208, 208)),
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 208, 208, 208),
+                  ),
                 ),
               ),
             ),
@@ -208,9 +225,15 @@ class _LoginPageState extends State<LoginPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Forgot password? -', style: TextStyle(color: Colors.grey, fontSize: 15)),
+                Text(
+                  'Forgot password? -',
+                  style: TextStyle(color: Colors.grey, fontSize: 15),
+                ),
                 SizedBox(width: 5),
-                Text('Reset', style: TextStyle(color: Colors.white, fontSize: 15)),
+                Text(
+                  'Reset',
+                  style: TextStyle(color: Colors.white, fontSize: 15),
+                ),
               ],
             ),
           ],
