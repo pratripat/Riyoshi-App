@@ -125,10 +125,6 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
-    );
     bool _isLoading = false;
     setState(() => _isLoading = true);
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/pages/dashboard.dart';
 import 'package:myapp/pages/bookingsPage.dart';
+import 'package:myapp/pages/employeePage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,7 +11,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   int _selectedIndex = 2;
 
   void _onItemTapped(int index) {
@@ -19,13 +19,13 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-final List<Widget> _pages = [
-  BookingsPage(),
-  Center(child: Text("Services Page")),
-  DashboardPage(),   // ← change this line
-  Center(child: Text("Employees Page")),
-  Center(child: Text("Customers Page")),
-];
+  final List<Widget> _pages = [
+    BookingsPage(),
+    Center(child: Text("Services Page")),
+    DashboardPage(), // ← change this line
+    EmployeesPage(),
+    Center(child: Text("Customers Page")),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -38,32 +38,21 @@ final List<Widget> _pages = [
         onTap: _onItemTapped,
 
         items: const [
-
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: "Bookings",
           ),
 
-          BottomNavigationBarItem(
-            icon: Icon(Icons.build),
-            label: "Services",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.build), label: "Services"),
 
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: "Dashboard",
           ),
 
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group),
-            label: "Employees",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: "Employees"),
 
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Customers",
-          ),
-
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Customers"),
         ],
       ),
     );
