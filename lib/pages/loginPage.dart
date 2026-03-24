@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/services/authService.dart';
 
-import 'homePage.dart';
+import 'mainShell.dart';
 
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
@@ -58,14 +59,14 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -107,7 +108,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -126,14 +127,21 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // all good — log and proceed
-    print('Email: $email');
-    print('Password: $password');
+    bool _isLoading = false;
+    setState(() => _isLoading = true);
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => DashboardPage()),
-    );
+    final success = await AuthService.login(email, password);
+
+    setState(() => _isLoading = false);
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MainShell()),
+      );
+    } else {
+      _showErrorDialog('Invalid email or password.');
+    }
   }
 
   @override
