@@ -68,6 +68,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w.-]+@[\w.-]+\.\w{2,}$');
@@ -125,7 +126,6 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    bool _isLoading = false;
     setState(() => _isLoading = true);
 
     final success = await AuthService.login(email, password);
@@ -152,91 +152,113 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 32, 32, 32),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('lib/images/logo.png', width: 300),
-            Text(
-              'Sign in to access the account area',
-              style: TextStyle(color: Colors.grey, fontSize: 15),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.5, -0.6), // top left area
+            radius: 1.2,
+            colors: [
+              Color(0xFF3b0764), // deep purple
+              Color(0xFF1a0533), // dark violet
+              Color(0xFF0a0010), // near black
+            ],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('lib/images/logo.png', width: 300),
+              Text(
+                'Sign in to access the account area',
+                style: TextStyle(color: Colors.grey, fontSize: 15),
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            Container(
-              width: 300,
-              height: 30,
-              child: TextField(
-                controller: _emailController,
-                cursorColor: Colors.white,
-                cursorHeight: 15,
-                style: TextStyle(color: Colors.grey),
-                keyboardType: TextInputType.emailAddress,
-                onSubmitted: (_) => _handleSubmit(),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.black,
-                  hintText: 'email',
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 5,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
+              Container(
+                width: 300,
+                height: 30,
+                child: TextField(
+                  controller: _emailController,
+                  cursorColor: Colors.white,
+                  cursorHeight: 15,
+                  style: TextStyle(color: Colors.grey),
+                  keyboardType: TextInputType.emailAddress,
+                  onSubmitted: (_) => _handleSubmit(),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.black,
+                    hintText: 'email',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 5,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 6),
+              const SizedBox(height: 6),
 
-            PasswordField(
-              controller: _passwordController,
-              onSubmit: _handleSubmit,
-            ),
+              PasswordField(
+                controller: _passwordController,
+                onSubmit: _handleSubmit,
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            Container(
-              width: 300,
-              height: 30,
-              child: ElevatedButton(
-                onPressed: _handleSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 103, 105, 109),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              Container(
+                width: 300,
+                height: 30,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 103, 105, 109),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 208, 208, 208),
-                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Continue',
+                          style: TextStyle(
+                            color: const Color.fromARGB(255, 208, 208, 208),
+                          ),
+                        ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Forgot password? -',
-                  style: TextStyle(color: Colors.grey, fontSize: 15),
-                ),
-                SizedBox(width: 5),
-                Text(
-                  'Reset',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
-                ),
-              ],
-            ),
-          ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Forgot password? -',
+                    style: TextStyle(color: Colors.grey, fontSize: 15),
+                  ),
+                  SizedBox(width: 5),
+                  Text(
+                    'Reset',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

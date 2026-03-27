@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/dashboardModel.dart';
+import '../services/dashboardServices.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -8,88 +10,227 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final double todayRevenue = 0;
-  final double weekRevenue = 0;
-  final double monthRevenue = 0;
-  final int bookingsToday = 0;
+  late Future<DashboardData> _future;
 
-  final List<double> revenueFlow = [0, 120, 80, 200, 60, 150, 90];
-  final List<String> revenueLabels = ['TUE','WED','THU','FRI','SAT','SUN','MON'];
+  @override
+  void initState() {
+    super.initState();
+    _future = DashboardService.fetchDashboard();
+  }
 
-  final List<double> trafficData = [10, 40, 80, 120, 60, 90, 30, 50, 20];
-  final List<String> trafficLabels = ['9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM'];
+  void _refresh() =>
+      setState(() => _future = DashboardService.fetchDashboard());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Dashboard',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+        child: FutureBuilder<DashboardData>(
+          future: _future,
+          builder: (context, snapshot) {
+            // ---- default/fallback values ----
+            final d =
+                snapshot.data ??
+                DashboardData(
+                  todayRevenue: 0,
+                  todayCount: 0,
+                  avgTicket: 0,
+                  yesterdayRevenue: 0,
+                  weekSales: 0,
+                  monthSales: 0,
+                  hourlyData: List.generate(9, (i) {
+                    const labels = [
+                      '9 AM',
+                      '10 AM',
+                      '11 AM',
+                      '12 PM',
+                      '1 PM',
+                      '2 PM',
+                      '3 PM',
+                      '4 PM',
+                      '5 PM',
+                    ];
+                    return HourlyData(time: labels[i], customers: 0);
+                  }),
+                  revenueData: [
+                    'TUE',
+                    'WED',
+                    'THU',
+                    'FRI',
+                    'SAT',
+                    'SUN',
+                    'MON',
+                  ].map((day) => RevenueData(day: day, rev: 0)).toList(),
+                );
+
+            final revenueFlow = d.revenueData
+                .map((e) => e.rev.toDouble())
+                .toList();
+            final revenueLabels = d.revenueData
+                .map((e) => e.day.toUpperCase())
+                .toList();
+            final trafficData = d.hourlyData
+                .map((e) => e.customers.toDouble())
+                .toList();
+            final trafficLabels = d.hourlyData.map((e) => e.time).toList();
+
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Dashboard',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Overview of your salon's performance.",
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: 'TODAY',
+                              badge: '—',
+                              value: '₹${d.todayRevenue}',
+                              sub: 'Revenue',
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'WEEK',
+                              badge: '7d',
+                              value: '₹${d.weekSales}',
+                              sub: 'Revenue',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: 'MONTH',
+                              badge: '30d',
+                              value: '₹${d.monthSales}',
+                              sub: 'Revenue',
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'BOOKINGS',
+                              badge: '#',
+                              value: '${d.todayCount}',
+                              sub: 'Today',
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      _ChartCard(
+                        title: 'REVENUE FLOW',
+                        subtitle: 'Weekly performance',
+                        child: _BarChart(
+                          values: revenueFlow,
+                          labels: revenueLabels,
+                          barColor: const Color(0xFF6C63FF),
+                          yPrefix: '₹',
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _ChartCard(
+                        title: 'TRAFFIC (9AM - 5PM)',
+                        subtitle: 'Hourly bookings',
+                        child: _BarChart(
+                          values: trafficData,
+                          labels: trafficLabels,
+                          barColor: const Color(0xFF4A90E2),
+                          yPrefix: '',
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "Overview of your salon's performance.",
-                style: TextStyle(color: Colors.grey[500], fontSize: 13),
-              ),
 
-              const SizedBox(height: 24),
+                // ---- loading overlay ----
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.purple[300],
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
 
-              Row(
-                children: [
-                  Expanded(child: _StatCard(label: 'TODAY', badge: '—', value: '₹${todayRevenue.toStringAsFixed(0)}', sub: 'Revenue')),
-                  const SizedBox(width: 10),
-                  Expanded(child: _StatCard(label: 'WEEK', badge: '7d', value: '₹${weekRevenue.toStringAsFixed(0)}', sub: 'Revenue')),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _StatCard(label: 'MONTH', badge: '30d', value: '₹${monthRevenue.toStringAsFixed(0)}', sub: 'Revenue')),
-                  const SizedBox(width: 10),
-                  Expanded(child: _StatCard(label: 'BOOKINGS', badge: '#', value: '$bookingsToday', sub: 'Today')),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              _ChartCard(
-                title: 'REVENUE FLOW',
-                subtitle: 'Weekly performance',
-                child: _BarChart(
-                  values: revenueFlow,
-                  labels: revenueLabels,
-                  barColor: const Color(0xFF6C63FF),
-                  yPrefix: '₹',
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              _ChartCard(
-                title: 'TRAFFIC (9AM - 5PM)',
-                subtitle: 'Hourly bookings',
-                child: _BarChart(
-                  values: trafficData,
-                  labels: trafficLabels,
-                  barColor: const Color(0xFF4A90E2),
-                  yPrefix: '',
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
+                // ---- error indicator ----
+                if (snapshot.hasError)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: GestureDetector(
+                      onTap: _refresh,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.wifi_off,
+                              color: Colors.redAccent,
+                              size: 12,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Retry',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -156,10 +297,7 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            sub,
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
+          Text(sub, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         ],
       ),
     );
@@ -226,12 +364,14 @@ class _BarChart extends StatelessWidget {
   });
 
   @override
+  @override
   Widget build(BuildContext context) {
+    if (values.isEmpty) return const SizedBox();
+
     final maxVal = values.reduce((a, b) => a > b ? a : b);
     const chartHeight = 120.0;
     const ySteps = 4;
 
-    // generate y axis labels: 0, 25%, 50%, 75%, 100% of max
     final yLabels = List.generate(ySteps + 1, (i) {
       final val = (maxVal / ySteps) * i;
       return '$yPrefix${val.toStringAsFixed(0)}';
@@ -247,10 +387,14 @@ class _BarChart extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: yLabels.map((l) => Text(
-              l,
-              style: TextStyle(color: Colors.grey[600], fontSize: 8),
-            )).toList(),
+            children: yLabels
+                .map(
+                  (l) => Text(
+                    l,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 8),
+                  ),
+                )
+                .toList(),
           ),
         ),
 
@@ -262,29 +406,63 @@ class _BarChart extends StatelessWidget {
             children: [
               SizedBox(
                 height: chartHeight,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: values.map((v) {
-                    final barH = maxVal == 0 ? 4.0 : (v / maxVal) * chartHeight;
-                    return Container(
-                      width: 18,
-                      height: barH < 4 ? 4 : barH,
-                      decoration: BoxDecoration(
-                        color: barColor.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // dynamically size bars based on available width
+                    final barWidth = (constraints.maxWidth / values.length) - 4;
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: values.map((v) {
+                        // min height of 3 so bars always visible even at 0
+                        final barH = maxVal == 0
+                            ? 3.0
+                            : ((v / maxVal) * chartHeight).clamp(
+                                3.0,
+                                chartHeight,
+                              );
+                        return Container(
+                          width: barWidth.clamp(4.0, 24.0),
+                          height: barH,
+                          decoration: BoxDecoration(
+                            color: maxVal == 0
+                                ? barColor.withOpacity(
+                                    0.3,
+                                  ) // dimmed when all zero
+                                : barColor.withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: labels.map((l) => Text(
-                  l,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 8),
-                )).toList(),
+              // x labels — clip to avoid overflow
+              SizedBox(
+                height: 16,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final itemWidth = constraints.maxWidth / labels.length;
+                    return Row(
+                      children: labels.map((l) {
+                        return SizedBox(
+                          width: itemWidth,
+                          child: Text(
+                            l,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 7,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
               ),
             ],
           ),
