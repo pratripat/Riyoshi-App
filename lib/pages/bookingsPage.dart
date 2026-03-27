@@ -1,62 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/pages/newBookingSheet.dart';
-
-class Booking {
-  final String id;
-  final String customerName;
-  final String service;
-  final String phone;
-  final String specialist;
-  final DateTime start;
-  final DateTime end;
-  final String status; // 'confirmed' | 'pending' | 'cancelled'
-
-  Booking({
-    required this.id,
-    required this.customerName,
-    required this.service,
-    required this.phone,
-    required this.specialist,
-    required this.start,
-    required this.end,
-    required this.status,
-  });
-
-  int get durationMinutes => end.difference(start).inMinutes;
-}
-
-final List<Booking> dummyBookings = [
-  Booking(
-    id: '1',
-    customerName: 'Tarun Tanmay',
-    service: 'Male Hair Colour',
-    phone: '9031220898',
-    specialist: 'Unassigned',
-    start: DateTime(2026, 3, 19, 14, 30),
-    end: DateTime(2026, 3, 19, 15, 15),
-    status: 'confirmed',
-  ),
-  Booking(
-    id: '2',
-    customerName: 'Rahul Sharma',
-    service: 'Haircut & Beard',
-    phone: '9876543210',
-    specialist: 'Amir',
-    start: DateTime(2026, 3, 19, 11, 0),
-    end: DateTime(2026, 3, 19, 11, 45),
-    status: 'confirmed',
-  ),
-  Booking(
-    id: '3',
-    customerName: 'Priya Singh',
-    service: 'Hair Spa',
-    phone: '9123456789',
-    specialist: 'Riya',
-    start: DateTime(2026, 3, 19, 16, 0),
-    end: DateTime(2026, 3, 19, 17, 0),
-    status: 'pending',
-  ),
-];
+import '../models/bookingsModel.dart';
+import '../services/bookingsService.dart';
+import 'newBookingSheet.dart';
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -68,6 +13,9 @@ class BookingsPage extends StatefulWidget {
 class _BookingsPageState extends State<BookingsPage> {
   DateTime _selectedDay = DateTime.now();
   final ScrollController _scrollController = ScrollController();
+  List<Booking> _allBookings = [];
+  bool _isLoading = true;
+  String? _error;
 
   static const double hourHeight = 64.0;
   static const double startHour = 8.0;
@@ -75,35 +23,81 @@ class _BookingsPageState extends State<BookingsPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    try {
+      final bookings = await BookingService.fetchAppointments();
+      setState(() {
+        _allBookings = bookings;
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+    } catch (e) {
+      setState(() {
+        _error = '$e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _refresh() {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    _loadBookings();
   }
 
   void _scrollToNow() {
     final now = DateTime.now();
-    final offset = ((now.hour + now.minute / 60.0) - startHour) * hourHeight - 100;
-    _scrollController.animateTo(
-      offset < 0 ? 0 : offset,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOut,
-    );
+    final offset =
+        ((now.hour + now.minute / 60.0) - startHour) * hourHeight - 100;
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        offset < 0 ? 0 : offset,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
-  List<Booking> get _todaysBookings => dummyBookings.where((b) =>
-    b.start.year == _selectedDay.year &&
-    b.start.month == _selectedDay.month &&
-    b.start.day == _selectedDay.day
-  ).toList();
+  List<Booking> get _todaysBookings => _allBookings
+      .where(
+        (b) =>
+            b.start.year == _selectedDay.year &&
+            b.start.month == _selectedDay.month &&
+            b.start.day == _selectedDay.day,
+      )
+      .toList();
 
-  void _previousDay() => setState(() => _selectedDay = _selectedDay.subtract(const Duration(days: 1)));
-  void _nextDay() => setState(() => _selectedDay = _selectedDay.add(const Duration(days: 1)));
+  void _previousDay() => setState(
+    () => _selectedDay = _selectedDay.subtract(const Duration(days: 1)),
+  );
+  void _nextDay() =>
+      setState(() => _selectedDay = _selectedDay.add(const Duration(days: 1)));
   void _goToday() {
     setState(() => _selectedDay = DateTime.now());
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
   }
 
   String _formatHeader(DateTime d) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
@@ -130,26 +124,38 @@ class _BookingsPageState extends State<BookingsPage> {
                 children: [
                   const Text(
                     'Salon Calendar',
-                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      builder: (_) => const NewBookingSheet(),
-                        );
-                      },
+                    onTap: () async {
+                      await showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (_) => const NewBookingSheet(),
+                      );
+                      _refresh(); // refresh after new booking
+                    },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF6C63FF),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         '+ New Booking',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -173,17 +179,27 @@ class _BookingsPageState extends State<BookingsPage> {
                   Expanded(
                     child: Text(
                       _formatHeader(_selectedDay),
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF6C63FF),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text('Day', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    child: const Text(
+                      'Day',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
                   ),
                 ],
               ),
@@ -191,38 +207,86 @@ class _BookingsPageState extends State<BookingsPage> {
 
             const SizedBox(height: 10),
 
-            // ── Booking count badge ──
+            // ── booking count badge ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1E2A),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white.withOpacity(0.08)),
                   ),
-                  child: Text(
-                    '${bookings.length} booking${bookings.length == 1 ? '' : 's'} today',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF6C63FF),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          '${bookings.length} booking${bookings.length == 1 ? '' : 's'} today',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
                 ),
               ),
             ),
 
             const SizedBox(height: 10),
 
-            // ── Grid ──
+            // ── Grid or error ──
             Expanded(
-              child: _DayGrid(
-                bookings: bookings,
-                scrollController: _scrollController,
-                selectedDay: _selectedDay,
-                onBookingTap: (b) => _showBookingDetail(context, b),
-                hourHeight: hourHeight,
-                startHour: startHour,
-              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF6C63FF),
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.redAccent,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.white54),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _refresh,
+                            child: const Text(
+                              'Retry',
+                              style: TextStyle(color: Color(0xFF6C63FF)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _DayGrid(
+                      bookings: bookings,
+                      scrollController: _scrollController,
+                      selectedDay: _selectedDay,
+                      onBookingTap: (b) => _showBookingDetail(context, b),
+                      hourHeight: hourHeight,
+                      startHour: startHour,
+                    ),
             ),
           ],
         ),
@@ -248,24 +312,34 @@ class _BookingsPageState extends State<BookingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            // title row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('APPOINTMENT',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 11, letterSpacing: 1)),
+                    Text(
+                      'APPOINTMENT',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(b.customerName,
-                        style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(
+                      b.customerName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 Row(
                   children: [
-                    _StatusBadge(status: b.status),
+                    _StatusBadge(status: b.normalizedStatus),
                     const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
@@ -278,7 +352,6 @@ class _BookingsPageState extends State<BookingsPage> {
 
             const SizedBox(height: 16),
 
-            // time + duration box
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
@@ -288,24 +361,48 @@ class _BookingsPageState extends State<BookingsPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_month_outlined, color: Color(0xFF6C63FF), size: 18),
+                  const Icon(
+                    Icons.calendar_month_outlined,
+                    color: Color(0xFF6C63FF),
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('TIME', style: TextStyle(color: Colors.grey[500], fontSize: 10, letterSpacing: 1)),
+                        Text(
+                          'TIME',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 10,
+                            letterSpacing: 1,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text('$dateStr • $timeStr',
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                        Text(
+                          '$dateStr • $timeStr',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.timer_outlined, color: Colors.grey, size: 13),
+                            const Icon(
+                              Icons.timer_outlined,
+                              color: Colors.grey,
+                              size: 13,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${b.durationMinutes} min duration',
-                              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -318,46 +415,91 @@ class _BookingsPageState extends State<BookingsPage> {
 
             const SizedBox(height: 16),
 
-            Text('SERVICE', style: TextStyle(color: Colors.grey[500], fontSize: 10, letterSpacing: 1)),
+            Text(
+              'SERVICE',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 10,
+                letterSpacing: 1,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(b.service, style: const TextStyle(color: Colors.white, fontSize: 15)),
-
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('CUSTOMER', style: TextStyle(color: Colors.grey[500], fontSize: 10, letterSpacing: 1)),
-                      const SizedBox(height: 4),
-                      Text(b.customerName, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('PHONE', style: TextStyle(color: Colors.grey[500], fontSize: 10, letterSpacing: 1)),
-                      const SizedBox(height: 4),
-                      Text(b.phone, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                    ],
-                  ),
-                ),
-              ],
+            Text(
+              b.service,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
 
+            if (b.totalPrice != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'TOTAL',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 10,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '₹${b.totalPrice}',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+
             const SizedBox(height: 16),
 
-            Text('SPECIALIST', style: TextStyle(color: Colors.grey[500], fontSize: 10, letterSpacing: 1)),
-            const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.circle, size: 8, color: Colors.grey),
-                const SizedBox(width: 6),
-                Text(b.specialist, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CUSTOMER',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 10,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        b.customerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PHONE',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 10,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        b.phone.isEmpty ? '—' : b.phone,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
 
@@ -370,10 +512,15 @@ class _BookingsPageState extends State<BookingsPage> {
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.grey[700]!),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Reschedule', style: TextStyle(color: Colors.white, fontSize: 15)),
+                    child: const Text(
+                      'Reschedule',
+                      style: TextStyle(color: Colors.white, fontSize: 15),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -382,10 +529,15 @@ class _BookingsPageState extends State<BookingsPage> {
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF3A1A1A),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.redAccent, fontSize: 15)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 15),
+                    ),
                   ),
                 ),
               ],
@@ -397,12 +549,18 @@ class _BookingsPageState extends State<BookingsPage> {
   }
 
   String _fmtTime(DateTime t) {
-    final h = t.hour > 12 ? t.hour - 12 : t.hour == 0 ? 12 : t.hour;
+    final h = t.hour > 12
+        ? t.hour - 12
+        : t.hour == 0
+        ? 12
+        : t.hour;
     final m = t.minute.toString().padLeft(2, '0');
     final ampm = t.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $ampm';
   }
 }
+
+// ── keep all your existing _StatusBadge, _DayGrid, _NavBtn widgets exactly as they are ──
 
 // ── Status Badge ─────────────────────────────────────────
 class _StatusBadge extends StatelessWidget {
@@ -443,7 +601,10 @@ class _StatusBadge extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label, style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -473,7 +634,8 @@ class _DayGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final totalHours = (endHour - startHour).toInt();
     final now = DateTime.now();
-    final isToday = selectedDay.year == now.year &&
+    final isToday =
+        selectedDay.year == now.year &&
         selectedDay.month == now.month &&
         selectedDay.day == now.day;
     final nowOffset = isToday
@@ -487,7 +649,6 @@ class _DayGrid extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── time labels ──
             SizedBox(
               width: timeColWidth,
@@ -497,13 +658,15 @@ class _DayGrid extends StatelessWidget {
                   final label = hour == 12
                       ? '12:00 PM'
                       : hour < 12
-                          ? '$hour:00 AM'
-                          : '${hour - 12}:00 PM';
+                      ? '$hour:00 AM'
+                      : '${hour - 12}:00 PM';
                   return Positioned(
                     top: i * hourHeight + 4,
                     right: 8,
-                    child: Text(label,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    child: Text(
+                      label,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    ),
                   );
                 }),
               ),
@@ -515,14 +678,19 @@ class _DayGrid extends StatelessWidget {
                 children: [
                   // hour lines
                   Column(
-                    children: List.generate(totalHours, (i) => Container(
-                      height: hourHeight,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.white.withOpacity(0.07)),
+                    children: List.generate(
+                      totalHours,
+                      (i) => Container(
+                        height: hourHeight,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withOpacity(0.07),
+                            ),
+                          ),
                         ),
                       ),
-                    )),
+                    ),
                   ),
 
                   // current time red line
@@ -554,9 +722,11 @@ class _DayGrid extends StatelessWidget {
                   // booking blocks
                   ...bookings.map((b) {
                     final topOffset =
-                        (b.start.hour + b.start.minute / 60.0 - startHour) * hourHeight;
+                        (b.start.hour + b.start.minute / 60.0 - startHour) *
+                        hourHeight;
                     final blockHeight =
-                        (b.end.difference(b.start).inMinutes / 60.0) * hourHeight;
+                        (b.end.difference(b.start).inMinutes / 60.0) *
+                        hourHeight;
 
                     Color blockColor;
                     switch (b.status) {
@@ -611,7 +781,10 @@ class _DayGrid extends StatelessWidget {
                               if (blockHeight > 52)
                                 Text(
                                   b.service,
-                                  style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 11,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                             ],
@@ -630,7 +803,11 @@ class _DayGrid extends StatelessWidget {
   }
 
   String _fmtTime(DateTime t) {
-    final h = t.hour > 12 ? t.hour - 12 : t.hour == 0 ? 12 : t.hour;
+    final h = t.hour > 12
+        ? t.hour - 12
+        : t.hour == 0
+        ? 12
+        : t.hour;
     final m = t.minute.toString().padLeft(2, '0');
     final ampm = t.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $ampm';
@@ -655,7 +832,10 @@ class _NavBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+        ),
       ),
     );
   }
